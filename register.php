@@ -1,18 +1,18 @@
 <?php
 require_once "config.php";
 
-$username = $password = $ confirm_password = "";
+$username = $password = $confirm_password = "";
 $username_err = $password_err = $confirm_password_err = "";
 
-if($SERVER['REQUEST-METHOD'] == "POST"){
+if ($_SERVER['REQUEST_METHOD'] == "POST"){
 
     // Check if username if empty
-    if(empty(trim($POST["username"]))){
+    if(empty(trim($_POST["username"]))){
         $username_err = "Username cannot be blank";
     }
     else{
         $sql = "SELECT id FROM users  WHERE username = ?";
-        $stmt = mysql_prepare($link,$sql);
+        $stmt = mysqli_prepare($conn,$sql);
         if($stmt)
         {
             mysqli_stmt_bind_param($stmt,"s", $param_username);
@@ -22,7 +22,7 @@ if($SERVER['REQUEST-METHOD'] == "POST"){
 
             // Try to execute this statement
             if(mysqli_stmt_execute($stmt)){
-                mysqli_stmt_store_result($start);
+                mysqli_stmt_store_result($stmt);
                 if(mysqli_stmt_num_rows($stmt) == 1)
                 {
                     $username_err = "This username is already taken";
@@ -36,16 +36,56 @@ if($SERVER['REQUEST-METHOD'] == "POST"){
             }
         }
     }
+
     mysqli_stmt_close($stmt);
-}
+
 
 // Check for password
 
 if(empty(trim($_POST['password']))){
-    $password_err = "Password cannot be blank"
+    $password_err = "Password cannot be blank";
 }
-elseif(strlen(trim($_POST['password'])))
+elseif(strlen(trim($_POST['password'])) < 5){
+    $password_err = "Password cannot be less than 5 characters";
+}
+else{
+    $password = trim($_POST['password']);
+}
 
+// Check for confirm password field
+if(trim($_POST['password']) != trim($_POST['confirm_password'])){
+    $password_err = "Passwords should match";
+}
+
+// If there were no errors, go ahead and insert into the database
+if(empty($username_err) && empty($password_err) && 
+empty($confirm_password_err))
+{
+    $sql = "INSERT INTO users(username, password) VALUES(?,?)";
+    $stmt = mysqli_prepare($conn, $sql);
+    if($stmt)
+    {
+        mysqli_stmt_bind_param($stmt, "ss",
+        $param_username, $param_password);
+
+        // Set these parameters
+        $param_username = $username;
+        $param_password = password_hash($password,
+        PASSWORD_DEFAULT);
+
+        // Try to execute the query
+        if(mysqli_stmt_execute($stmt))
+        {
+            header("location: login.php");
+        }
+        else{
+            echo "Something went wrong... cannot redirect!";
+        }
+    }
+    mysqli_stmt_close($stmt);
+}
+mysqli_close($conn);
+}
 ?>
 
 
@@ -88,21 +128,26 @@ elseif(strlen(trim($_POST['password'])))
 <h3>Register Here:</h3>
 <hr>
 
-<form>
+<form action = "" method="post">
   <div class="form-row">
     <div class="form-group col-md-6">
-      <label for="inputEmail4">Email</label>
-      <input type="email" class="form-control" id="inputEmail4" placeholder="Email">
+      <label for="inputEmail4">Username</label>
+      <input type="text" class="form-control" name="username"
+       id="inputEmail4" placeholder="Email">
     </div>
     <div class="form-group col-md-6">
       <label for="inputPassword4">Password</label>
-      <input type="password" class="form-control" id="inputPassword4" placeholder="Password">
+      <input type="password" class="form-control" name="password" 
+      id="inputPassword4" placeholder="Password">
     </div>
   </div>
   <div class="form-group">
-    <label for="inputAddress">Address</label>
-    <input type="text" class="form-control" id="inputAddress" placeholder="1234 Main St">
+      <label for="inputPassword4">Confirm Password</label>
+      <input type="password" class="form-control" name="confirm_password" 
+      id="inputPassword" placeholder="Confirm Password">
+    </div>
   </div>
+  
   <div class="form-group">
     <label for="inputAddress2">Address 2</label>
     <input type="text" class="form-control" id="inputAddress2" placeholder="Apartment, studio, or floor">
